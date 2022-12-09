@@ -1,0 +1,5 @@
+name: PaintballPaint
+version: 1.0
+author: Cameron R (glitchedturtle)
+website: https://github.com/glitchedturtle
+main: com.glitchedturtle.paintball.PaintballPlugin

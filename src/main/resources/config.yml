@@ -1,0 +1,10 @@
+# Takes an entity type
+enabled_projectile_types:
+  - SNOWBALL
+  - EGG
+
+# Takes the data value for stained clay
+# ref: https://minecraft.fandom.com/wiki/Java_Edition_data_values/Pre-flattening#Wool,_terracotta,_stained_Glass_and_carpet
+painted_data_values:
+  - 14
+  - 3
