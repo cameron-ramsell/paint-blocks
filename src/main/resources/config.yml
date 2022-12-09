@@ -8,3 +8,10 @@ enabled_projectile_types:
 painted_data_values:
   - 14
   - 3
+
+# Takes the material type for blocks that can't be painted
+blacklisted_block_types:
+  - AIR
+  - BARRIER
+
+reset_delay: 15000

@@ -21,12 +21,51 @@ import java.util.logging.Level;
 public class PaintballPlugin extends JavaPlugin implements Listener {
 
     private Set<EntityType> enabledTypeSet;
+    private Set<Material> blacklistedBlockTypeSet;
     private List<Byte> paintBlockColor;
+    private long resetDelay;
+
+    private ArrayDeque<BlockSnapshot> resetQueue = new ArrayDeque<>();
 
     public void onEnable() {
 
         this.loadConfiguration();
         Bukkit.getPluginManager().registerEvents(this, this);
+
+        Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
+
+            if(resetQueue.size() == 0)
+                return;
+            long curTime = System.currentTimeMillis();
+            while(!resetQueue.isEmpty() && resetQueue.peek().getResetAt() <= curTime) {
+
+                BlockSnapshot snap = resetQueue.poll();
+                if(snap == null)
+                    continue;
+
+                Block blk = snap.getLocation().getBlock();
+
+                blk.setType(snap.getMaterial());
+                blk.setData(snap.getData());
+
+            }
+
+        }, 5L, 5L);
+
+    }
+
+    @Override
+    public void onDisable() {
+
+        while(!resetQueue.isEmpty()) {
+
+            BlockSnapshot snap = resetQueue.poll();
+            Block blk = snap.getLocation().getBlock();
+
+            blk.setType(snap.getMaterial());
+            blk.setData(snap.getData());
+
+        }
 
     }
 
@@ -38,15 +77,28 @@ public class PaintballPlugin extends JavaPlugin implements Listener {
         }
 
         enabledTypeSet = new HashSet<>();
+        blacklistedBlockTypeSet = new HashSet<>();
         paintBlockColor = new ArrayList<>();
 
         Configuration conf = this.getConfig();
+        resetDelay = conf.getLong("reset_delay");
+
         for(String type : conf.getStringList("enabled_projectile_types")) {
 
             try {
                 enabledTypeSet.add(EntityType.valueOf(type.toUpperCase()));
             } catch(IllegalArgumentException ex) {
                 this.getLogger().log(Level.WARNING, "Entity type '{}' does not exist, skipping", type.toUpperCase());
+            }
+
+        }
+
+        for(String type : conf.getStringList("blacklisted_block_types")) {
+
+            try {
+                blacklistedBlockTypeSet.add(Material.valueOf(type.toUpperCase()));
+            } catch(IllegalArgumentException ex) {
+                this.getLogger().log(Level.WARNING, "Block material '{}' does not exist, skipping", type.toUpperCase());
             }
 
         }
@@ -89,8 +141,10 @@ public class PaintballPlugin extends JavaPlugin implements Listener {
                 break;
         }
 
-        if(hit == null || hit.getType() == Material.AIR || hit.getType() == Material.BARRIER)
+        if(hit == null || blacklistedBlockTypeSet.contains(hit.getType()))
             return;
+        resetQueue.add(new BlockSnapshot(hit.getLocation(), hit.getType(), hit.getData(), System.currentTimeMillis() + resetDelay));
+
         hit.setType(Material.STAINED_CLAY);
         hit.setData(this.randomPaintColor());
 
